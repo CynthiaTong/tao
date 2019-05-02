@@ -75,39 +75,35 @@ func BufferSizeOption(indicator int) ServerOption {
 	}
 }
 
-// OnConnectOption returns a ServerOption that will set callback to call when new
-// client connected.
+// OnConnectOption returns a ServerOption that will set callback to call when new client connected.
 func OnConnectOption(cb func(WriteCloser) bool) ServerOption {
 	return func(o *options) {
 		o.onConnect = cb
 	}
 }
 
-// OnMessageOption returns a ServerOption that will set callback to call when new
-// message arrived.
+// OnMessageOption returns a ServerOption that will set callback to call when new message arrived.
 func OnMessageOption(cb func(Message, WriteCloser)) ServerOption {
 	return func(o *options) {
 		o.onMessage = cb
 	}
 }
 
-// OnCloseOption returns a ServerOption that will set callback to call when client
-// closed.
+// OnCloseOption returns a ServerOption that will set callback to call when client closed.
 func OnCloseOption(cb func(WriteCloser)) ServerOption {
 	return func(o *options) {
 		o.onClose = cb
 	}
 }
 
-// OnErrorOption returns a ServerOption that will set callback to call when error
-// occurs.
+// OnErrorOption returns a ServerOption that will set callback to call when error occurs.
 func OnErrorOption(cb func(WriteCloser)) ServerOption {
 	return func(o *options) {
 		o.onError = cb
 	}
 }
 
-// Server  is a server to serve TCP requests.
+// Server is a server for TCP requests.
 type Server struct {
 	opts   options
 	ctx    context.Context
@@ -117,8 +113,7 @@ type Server struct {
 	wg     *sync.WaitGroup
 	mu     sync.Mutex // guards following
 	lis    map[net.Listener]bool
-	// for periodically running function every duration.
-	interv time.Duration
+	interv time.Duration // for periodically running function after each duration
 	sched  onScheduleFunc
 }
 
@@ -127,9 +122,10 @@ type Server struct {
 func NewServer(opt ...ServerOption) *Server {
 	var opts options
 	for _, o := range opt {
-		o(&opts)
+		o(&opts) //
 	}
 
+	// set default opts
 	if opts.codec == nil {
 		opts.codec = TypeLengthValueCodec{}
 	}
@@ -202,10 +198,9 @@ func (s *Server) Conn(id int64) (*ServerConn, bool) {
 	return nil, ok
 }
 
-// Start starts the TCP server, accepting new clients and creating service
-// go-routine for each. The service go-routines read messages and then call
-// the registered handlers to handle them. Start returns when failed with fatal
-// errors, the listener willl be closed when returned.
+// Start starts the TCP server, accepting new clients and creating service go-routine for each.
+// The service go-routines read messages and then call the registered handlers to handle them.
+// Start returns when failed with fatal errors, the listener will be closed when returned.
 func (s *Server) Start(l net.Listener) error {
 	s.mu.Lock()
 	if s.lis == nil {

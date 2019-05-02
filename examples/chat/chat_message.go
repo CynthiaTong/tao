@@ -3,13 +3,13 @@ package chat
 import (
 	"context"
 
+	"github.com/cynthiatong/tao"
 	"github.com/leesper/holmes"
-	"github.com/leesper/tao"
 )
 
 const (
-	// ChatMessage is the message number of chat message.
-	ChatMessage int32 = 1
+	// ChatMessageNumber is the message number of chat message.
+	ChatMessageNumber int32 = 1
 )
 
 // Message defines the chat message.
@@ -17,9 +17,9 @@ type Message struct {
 	Content string
 }
 
-// MessageNumber returns the message number.
+// MessageNumber returns the Message number.
 func (cm Message) MessageNumber() int32 {
-	return ChatMessage
+	return ChatMessageNumber
 }
 
 // Serialize Serializes Message into bytes.

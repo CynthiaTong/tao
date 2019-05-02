@@ -7,9 +7,9 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/cynthiatong/tao"
+	"github.com/cynthiatong/tao/examples/chat"
 	"github.com/leesper/holmes"
-	"github.com/leesper/tao"
-	"github.com/leesper/tao/examples/chat"
 )
 
 // ChatServer is the chatting server.
@@ -37,7 +37,7 @@ func NewChatServer() *ChatServer {
 func main() {
 	defer holmes.Start().Stop()
 
-	tao.Register(chat.ChatMessage, chat.DeserializeMessage, chat.ProcessMessage)
+	tao.Register(chat.ChatMessageNumber, chat.DeserializeMessage, chat.ProcessMessage)
 
 	l, err := net.Listen("tcp", fmt.Sprintf("%s:%d", "0.0.0.0", 12345))
 	if err != nil {

@@ -6,15 +6,15 @@ import (
 	"net"
 	"os"
 
+	"github.com/cynthiatong/tao"
+	"github.com/cynthiatong/tao/examples/chat"
 	"github.com/leesper/holmes"
-	"github.com/leesper/tao"
-	"github.com/leesper/tao/examples/chat"
 )
 
 func main() {
 	defer holmes.Start().Stop()
 
-	tao.Register(chat.ChatMessage, chat.DeserializeMessage, nil)
+	tao.Register(chat.ChatMessageNumber, chat.DeserializeMessage, nil)
 
 	c, err := net.Dial("tcp", "127.0.0.1:12345")
 	if err != nil {

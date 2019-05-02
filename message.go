@@ -52,8 +52,7 @@ func init() {
 
 // Register registers the unmarshal and handle functions for msgType.
 // If no unmarshal function provided, the message will not be parsed.
-// If no handler function provided, the message will not be handled unless you
-// set a default one by calling SetOnMessageCallback.
+// If no handler function provided, the message will not be handled unless you set a default one by calling SetOnMessageCallback.
 // If Register being called twice on one msgType, it will panics.
 func Register(msgType int32, unmarshaler func([]byte) (Message, error), handler func(context.Context, WriteCloser)) {
 	if _, ok := messageRegistry[msgType]; ok {
@@ -87,6 +86,7 @@ func GetHandlerFunc(msgType int32) HandlerFunc {
 // Message represents the structured data that can be handled.
 type Message interface {
 	MessageNumber() int32
+	MessageName() string
 	Serialize() ([]byte, error)
 }
 
@@ -108,6 +108,11 @@ func (hbm HeartBeatMessage) Serialize() ([]byte, error) {
 // MessageNumber returns message number.
 func (hbm HeartBeatMessage) MessageNumber() int32 {
 	return HeartBeat
+}
+
+// MessageName returns message name.
+func (hbm HeartBeatMessage) MessageName() string {
+	return "hb"
 }
 
 // DeserializeHeartBeat deserializes bytes into Message.
@@ -228,10 +233,97 @@ func (codec TypeLengthValueCodec) Encode(msg Message) ([]byte, error) {
 	return packet, nil
 }
 
+// ProtobufCodec defines a transport format for protobuf messages
+type ProtobufCodec struct{}
+
+func (codec ProtobufCodec) Encode(msg Message) ([]byte, error) {
+	data, err := msg.Serialize()
+	if err != nil {
+		return nil, err
+	}
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.LittleEndian, msg.MessageNumber())
+	binary.Write(buf, binary.LittleEndian, int32(len(data)))
+	buf.Write([]byte(msg.MessageName() + MessageNameDelim))
+	buf.Write(data)
+	// TODO checksum
+	packet := buf.Bytes()
+	return packet, nil
+}
+
+// Decode decodes the bytes data into Message
+func (codec ProtobufCodec) Decode(raw net.Conn) (Message, error) {
+	byteChan := make(chan []byte)
+	errorChan := make(chan error)
+
+	go func(bc chan []byte, ec chan error) {
+		typeData := make([]byte, MessageTypeBytes)
+		_, err := io.ReadFull(raw, typeData)
+		if err != nil {
+			ec <- err
+			close(bc)
+			close(ec)
+			holmes.Debugln("go-routine read message type exited")
+			return
+		}
+		bc <- typeData
+	}(byteChan, errorChan)
+
+	var typeBytes []byte
+
+	select {
+	case err := <-errorChan:
+		return nil, err
+
+	case typeBytes = <-byteChan:
+		if typeBytes == nil {
+			holmes.Warnln("read type bytes nil")
+			return nil, ErrBadData
+		}
+
+		// TODO checksum validation
+
+		typeBuf := bytes.NewReader(typeBytes)
+		var msgType int32
+		if err := binary.Read(typeBuf, binary.LittleEndian, &msgType); err != nil {
+			return nil, err
+		}
+
+		lengthBytes := make([]byte, MessageLenBytes)
+		_, err := io.ReadFull(raw, lengthBytes)
+		if err != nil {
+			return nil, err
+		}
+		lengthBuf := bytes.NewReader(lengthBytes)
+		var msgLen uint32
+		if err = binary.Read(lengthBuf, binary.LittleEndian, &msgLen); err != nil {
+			return nil, err
+		}
+		if msgLen > MessageMaxBytes {
+			holmes.Errorf("message(type %d) has bytes(%d) beyond max %d\n", msgType, msgLen, MessageMaxBytes)
+			return nil, ErrBadData
+		}
+
+		// read protobuf data
+		msgBytes := make([]byte, msgLen)
+		_, err = io.ReadFull(raw, msgBytes)
+		if err != nil {
+			return nil, err
+		}
+
+		// deserialize message from bytes
+		unmarshaler := GetUnmarshalFunc(msgType)
+		if unmarshaler == nil {
+			return nil, ErrUndefined(msgType)
+		}
+		return unmarshaler(msgBytes)
+	}
+}
+
 // ContextKey is the key type for putting context-related data.
 type contextKey string
 
-// Context keys for messge, server and net ID.
+// Context keys for message, server and net ID.
 const (
 	messageCtx contextKey = "message"
 	serverCtx  contextKey = "server"

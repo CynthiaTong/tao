@@ -17,6 +17,8 @@ const (
 	MessageLenBytes = 4
 	// MessageMaxBytes is the maximum bytes allowed for application data.
 	MessageMaxBytes = 1 << 23 // 8M
+	// MessageNameDelim is the delimiter at the end of MessageName string.
+	MessageNameDelim = "\x00"
 )
 
 // MessageHandler is a combination of message and its handler function.
@@ -31,7 +33,7 @@ type WriteCloser interface {
 	Close()
 }
 
-// ServerConn represents a server connection to a TCP server, it implments Conn.
+// ServerConn represents a server connection to a TCP server, it implements Conn.
 type ServerConn struct {
 	netid   int64
 	belong  *Server
@@ -51,8 +53,7 @@ type ServerConn struct {
 	cancel  context.CancelFunc
 }
 
-// NewServerConn returns a new server connection which has not started to
-// serve requests yet.
+// NewServerConn returns a new server connection which has not started to serve requests yet.
 func NewServerConn(id int64, s *Server, c net.Conn) *ServerConn {
 	sc := &ServerConn{
 		netid:     id,
@@ -126,8 +127,7 @@ func (sc *ServerConn) ContextValue(k interface{}) interface{} {
 	return sc.ctx.Value(k)
 }
 
-// Start starts the server connection, creating go-routines for reading,
-// writing and handlng.
+// Start starts the server connection, creating go-routines for reading, writing and handlng.
 func (sc *ServerConn) Start() {
 	holmes.Infof("conn start, <%v -> %v>\n", sc.rawConn.LocalAddr(), sc.rawConn.RemoteAddr())
 	onConnect := sc.belong.opts.onConnect
@@ -143,8 +143,7 @@ func (sc *ServerConn) Start() {
 	}
 }
 
-// Close gracefully closes the server connection. It blocked until all sub
-// go-routines are completed and returned.
+// Close gracefully closes the server connection. It blocked until all sub go-routines are completed and returned.
 func (sc *ServerConn) Close() {
 	sc.once.Do(func() {
 		holmes.Infof("conn close gracefully, <%v -> %v>\n", sc.rawConn.LocalAddr(), sc.rawConn.RemoteAddr())
@@ -734,7 +733,7 @@ func handleLoop(c WriteCloser, wg *sync.WaitGroup) {
 
 	for {
 		select {
-		case <-cDone: // connectin closed
+		case <-cDone: // connection closed
 			holmes.Debugln("receiving cancel signal from conn")
 			return
 		case <-sDone: // server closed
