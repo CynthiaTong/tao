@@ -272,8 +272,7 @@ type ClientConn struct {
 	cancel    context.CancelFunc
 }
 
-// NewClientConn returns a new client connection which has not started to
-// serve requests yet.
+// NewClientConn returns a new client connection which has not started to serve requests yet.
 func NewClientConn(netid int64, c net.Conn, opt ...ServerOption) *ClientConn {
 	var opts options
 	for _, o := range opt {
@@ -356,8 +355,7 @@ func (cc *ClientConn) ContextValue(k interface{}) interface{} {
 	return cc.ctx.Value(k)
 }
 
-// Start starts the client connection, creating go-routines for reading,
-// writing and handlng.
+// Start starts the client connection, creating go-routines for reading, writing and handlng.
 func (cc *ClientConn) Start() {
 	holmes.Infof("conn start, <%v -> %v>\n", cc.rawConn.LocalAddr(), cc.rawConn.RemoteAddr())
 	onConnect := cc.opts.onConnect
@@ -419,6 +417,7 @@ func (cc *ClientConn) Close() {
 }
 
 // reconnect reconnects and returns a new *ClientConn.
+// TODO: exponential backoff
 func (cc *ClientConn) reconnect() {
 	var c net.Conn
 	var err error
@@ -624,8 +623,7 @@ func readLoop(c WriteCloser, wg *sync.WaitGroup) {
 	}
 }
 
-/* writeLoop() receive message from channel, serialize it into bytes,
-then blocking write into connection */
+/* writeLoop() receive message from channel, serialize it into bytes, then blocking write into connection */
 func writeLoop(c WriteCloser, wg *sync.WaitGroup) {
 	var (
 		rawConn net.Conn

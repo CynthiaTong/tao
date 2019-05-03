@@ -247,7 +247,7 @@ func (codec ProtobufCodec) Encode(msg Message) ([]byte, error) {
 	binary.Write(buf, binary.LittleEndian, int32(len(msgname)+len(data)))
 	buf.Write(msgname)
 	buf.Write(data)
-	// TODO checksum
+	// OPTIMIZATION checksum
 	packet := buf.Bytes()
 	return packet, nil
 }
@@ -281,8 +281,6 @@ func (codec ProtobufCodec) Decode(raw net.Conn) (Message, error) {
 			holmes.Warnln("read type bytes nil")
 			return nil, ErrBadData
 		}
-
-		// TODO checksum validation
 
 		typeBuf := bytes.NewReader(typeBytes)
 		var msgType int32

@@ -12,6 +12,10 @@ import (
 	"github.com/leesper/holmes"
 )
 
+var (
+	banlist = map[string]bool{"127.0.0.1": true}
+)
+
 // ChatServer is the chatting server.
 type ChatServer struct {
 	*tao.Server
@@ -29,8 +33,9 @@ func NewChatServer() *ChatServer {
 	onCloseOption := tao.OnCloseOption(func(conn tao.WriteCloser) {
 		holmes.Infoln("close chat client")
 	})
+	banlistOption := tao.BanlistOption(banlist)
 	return &ChatServer{
-		tao.NewServer(onConnectOption, onErrorOption, onCloseOption),
+		tao.NewServer(onConnectOption, onErrorOption, onCloseOption, banlistOption),
 	}
 }
 

@@ -1,4 +1,4 @@
-/* Data types and structues for concurrent use:
+/* Data types and structures for concurrent use:
 AtomicInt32
 AtomicInt64
 AtomicBoolean

@@ -22,6 +22,11 @@ func (cm Message) MessageNumber() int32 {
 	return ChatMessageNumber
 }
 
+// MessageName returns the Message name.
+func (cm Message) MessageName() string {
+	return ""
+}
+
 // Serialize Serializes Message into bytes.
 func (cm Message) Serialize() ([]byte, error) {
 	return []byte(cm.Content), nil
@@ -46,5 +51,7 @@ func ProcessMessage(ctx context.Context, conn tao.WriteCloser) {
 	if ok {
 		msg := tao.MessageFromContext(ctx)
 		s.Broadcast(msg)
+	} else {
+		holmes.Errorf("ServerFromContext error")
 	}
 }

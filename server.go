@@ -29,9 +29,10 @@ type options struct {
 	onMessage  onMessageFunc
 	onClose    onCloseFunc
 	onError    onErrorFunc
-	workerSize int  // numbers of worker go-routines
-	bufferSize int  // size of buffered channel
-	reconnect  bool // for ClientConn use only
+	workerSize int             // numbers of worker go-routines
+	bufferSize int             // size of buffered channel
+	reconnect  bool            // for ClientConn use only
+	banlist    map[string]bool // client addr banlist
 }
 
 // ServerOption sets server options.
@@ -48,6 +49,13 @@ func ReconnectOption() ServerOption {
 func CustomCodecOption(codec Codec) ServerOption {
 	return func(o *options) {
 		o.codec = codec
+	}
+}
+
+// BanlistOption returns a ServerOption that will apply a custom banlist.
+func BanlistOption(bl map[string]bool) ServerOption {
+	return func(o *options) {
+		o.banlist = bl
 	}
 }
 
@@ -122,7 +130,7 @@ type Server struct {
 func NewServer(opt ...ServerOption) *Server {
 	var opts options
 	for _, o := range opt {
-		o(&opts) //
+		o(&opts) // set server option callbacks
 	}
 
 	// set default opts
@@ -198,6 +206,17 @@ func (s *Server) Conn(id int64) (*ServerConn, bool) {
 	return nil, ok
 }
 
+// inBanlist is a private method to check if conn's ip is included in server's banlist.
+func (s *Server) inBanlist(conn net.Conn) (string, bool) {
+	ip := conn.RemoteAddr().(*net.TCPAddr).IP.String()
+	if s.opts.banlist != nil {
+		if _, ok := s.opts.banlist[ip]; ok {
+			return ip, true
+		}
+	}
+	return ip, false
+}
+
 // Start starts the TCP server, accepting new clients and creating service go-routine for each.
 // The service go-routines read messages and then call the registered handlers to handle them.
 // Start returns when failed with fatal errors, the listener will be closed when returned.
@@ -249,6 +268,11 @@ func (s *Server) Start(l net.Listener) error {
 		}
 		tempDelay = 0
 
+		if ip, banned := s.inBanlist(rawConn); banned {
+			holmes.Infof("%s blocked", ip)
+			rawConn.Close()
+			continue
+		}
 		// how many connections do we have ?
 		sz := s.ConnsSize()
 		if sz >= MaxConnections {
@@ -330,9 +354,7 @@ func (s *Server) Stop() {
 	os.Exit(0)
 }
 
-// Retrieve the extra data(i.e. net id), and then redispatch timeout callbacks
-// to corresponding client connection, this prevents one client from running
-// callbacks of other clients
+// Retrieve the extra data(i.e. net id), and then redispatch timeout callbacks to corresponding client connection, this prevents one client from running callbacks of other clients
 func (s *Server) timeOutLoop() {
 	defer s.wg.Done()
 
