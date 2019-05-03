@@ -241,10 +241,11 @@ func (codec ProtobufCodec) Encode(msg Message) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	msgname := []byte(msg.MessageName() + string(MessageNameDelim))
 	buf := new(bytes.Buffer)
 	binary.Write(buf, binary.LittleEndian, msg.MessageNumber())
-	binary.Write(buf, binary.LittleEndian, int32(len(data)))
-	buf.Write([]byte(msg.MessageName() + MessageNameDelim))
+	binary.Write(buf, binary.LittleEndian, int32(len(msgname)+len(data)))
+	buf.Write(msgname)
 	buf.Write(data)
 	// TODO checksum
 	packet := buf.Bytes()

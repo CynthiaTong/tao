@@ -18,7 +18,7 @@ const (
 	// MessageMaxBytes is the maximum bytes allowed for application data.
 	MessageMaxBytes = 1 << 23 // 8M
 	// MessageNameDelim is the delimiter at the end of MessageName string.
-	MessageNameDelim = "\x00"
+	MessageNameDelim = '\x00'
 )
 
 // MessageHandler is a combination of message and its handler function.
